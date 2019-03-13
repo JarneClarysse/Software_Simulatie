@@ -1,0 +1,8 @@
+Id;Latitude;Longitude;Type
+1;50;300;Bridge
+2;250;350;Bridge
+3;500;400;Lock
+4;750;500;Bridge
+5;750;100;Intersection
+6;900;100;Bridge
+7;250;60;Lock
