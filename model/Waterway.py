@@ -6,8 +6,8 @@ import random
 import numpy as np
 
 # File vari
-nodeFile = "../files/waterway_nodelist.csv"
-edgeFile = "../files/waterway_edgelist.csv"
+nodeFile = "../files/nodes_real.csv"
+edgeFile = "../files/edges_real.csv"
 
 # Lock variables
 left = -1
@@ -255,8 +255,12 @@ class Vessel(sim.Component):
             if(len(self.path)!=0):
                 node = nodes[self.path.pop()]
                 dist = distance(self, node)
-                x_speed = ((node.x - self.x) / dist) * self.speed
-                y_speed = ((node.y - self.y) / dist) * self.speed
+                if(dist != 0 ):
+                    x_speed = ((node.x - self.x) / dist) * self.speed
+                    y_speed = ((node.y - self.y) / dist) * self.speed
+                else :
+                    x_speed = 0
+                    y_speed = 0
                 amount = round(dist / self.speed)
                 if amount > 5:
                     treshold = amount - 6
@@ -474,7 +478,7 @@ class VesselGenerator(sim.Component):
             # currentnode[vessel.id] = vessel.path.pop(0)
             # Generate random starting and ending node
             vesselStartAndEnd = random.sample(nodelist, 2)
-            print(str(vesselStartAndEnd[0].id) + " " + str(vesselStartAndEnd[1].id))
+            print(str(vesselStartAndEnd[0].id) + " tester " + str(vesselStartAndEnd[1].id))
             # Generated path between vessels
             paths_between_generator = nx.all_simple_paths(G, source=vesselStartAndEnd[1].id,
                                                           target=vesselStartAndEnd[0].id)
@@ -511,9 +515,10 @@ for node in G.nodes():
 
 stuff = nx.check_planarity(G, False)
 print(stuff[1].check_structure())
+'''
 for x in range(len(wait)):
     wait[x+1].length.animate(x=x_start, y=screen_y_max+20, horizontal_scale=2, width=(width) / len(wait), title='# vessels at node ' + str(x + 1))
-    x_start += (width) / len(wait) + 10
+    x_start += (width) / len(wait) + 10'''
 print("starting env")
 env.run(till=400)  # Set the duration of the simulation
 
