@@ -256,7 +256,7 @@ class Vessel(sim.Component):
                 amount = round(dist / self.speed)
                 if amount > 5:
                     treshold = amount - 6
-                    count = 1
+                    count = 1 #VAARWATER
                 else:
                     treshold = 0
                     count = 6 - amount
