@@ -151,6 +151,7 @@ class Intersection(sim.Component):
                 deadlockvessels = []
                 uniqueEdgevessels = {}
                 yield self.hold(1)
+                print("here we go again")
                 for vessel in self.vessels:
                     rechterqueue = self.edgequeues[self.neighbours[currentnode[vessel.id]]]
 
@@ -158,17 +159,20 @@ class Intersection(sim.Component):
 
                         if self.count[vessel] == 5:
                             print (self.count[vessel])
-                            if uniqueEdgevessels.get(currentnode[vessel.id])!=None:
+                            if not currentnode[vessel.id] in uniqueEdgevessels:
+                                print("entered deadvessels")
                                 deadlockvessels.append(vessel)
                                 uniqueEdgevessels[currentnode[vessel.id]] = 1;
+                                print(str(uniqueEdgevessels[currentnode[vessel.id]])+" jap ")
                         else:
                             self.count[vessel] += 1
                             vessel.activate()
                     else:
                         self.count[vessel] += 1
                         vessel.activate()
-                if len(deadlockvessels)==4:
-                    vessel = deadlockvessels[random.randint(0,len(deadlockvessels))]
+                if len(deadlockvessels)==len(self.neighbours):
+                    print(len(deadlockvessels))
+                    vessel = deadlockvessels[random.randint(0,len(deadlockvessels))-1]
                     vessel.activate()
 
             else:
@@ -462,7 +466,7 @@ for node in intersectnodes:
 class VesselGenerator(sim.Component):
     def process(self):
         id = 0;
-        while id < 20:
+        while True:
             # Set the current node of the vessel
             # currentnode[vessel.id] = vessel.path.pop(0)
             # Generate random starting and ending node
