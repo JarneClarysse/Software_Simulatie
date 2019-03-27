@@ -13,11 +13,14 @@ edgeFile = "../files/waterway_edgelist.csv"
 left = -1
 right = +1
 
+
 def sidename(side):
     return "l" if side == left else "r"
 
+
 def distance(comp1, comp2):
     return math.sqrt((comp1.x - comp2.x) ** 2 + (comp1.y - comp2.y) ** 2)
+
 
 # Lock component
 class Lock(sim.Component):
@@ -27,6 +30,7 @@ class Lock(sim.Component):
         self.y = y
         self.type = type
         self.maxLength = maxLength
+        sim.AnimateImage('../Pictures/lock.png', x=self.x - 15, y=self.y - 15, width=40)
         sim.Animate(circle0=2, x0=self.x, y0=self.y, fillcolor0=('black', 200), linewidth0=2, linecolor0='black')
         sim.AnimateText(text=self.type + " " + str(self.id), font='narrow', textcolor='black', text_anchor='c',
                         offsety=30, x=self.x, y=self.y)
@@ -128,6 +132,7 @@ class Lock(sim.Component):
             yield self.passivate()
             print("activated?")
 
+
 # Intersection component
 class Intersection(sim.Component):
     def setup(self, id, x, y, type):
@@ -142,8 +147,6 @@ class Intersection(sim.Component):
         self.edgequeues = {}
         self.neighbours = {}
         self.count = {}
-
-
 
     def process(self):
         while True:
@@ -177,6 +180,7 @@ class Intersection(sim.Component):
 
             else:
                 yield self.passivate()
+
 
 # Bridge component
 class Bridge(sim.Component):
@@ -220,10 +224,12 @@ class Bridge(sim.Component):
                     self.closed = True
                     yield self.passivate()
 
+
 # Narrowing component
 class Narrowing(sim.Component):
     def process(self):
         pass
+
 
 class Vessel(sim.Component):
     def setup(self, id, speed, path, length,height):
@@ -254,7 +260,7 @@ class Vessel(sim.Component):
                 amount = round(dist / self.speed)
                 if amount > 5:
                     treshold = amount - 6
-                    count = 1
+                    count = 1 #VAARWATER
                 else:
                     treshold = 0
                     count = 6 - amount
@@ -324,6 +330,7 @@ class Vessel(sim.Component):
                 self.pic_vessel.update(visible=False)
                 start = False
 
+
 class Node(sim.Component):
     def setup(self, id, x, y, type):
         self.id = id
@@ -342,10 +349,6 @@ class Node(sim.Component):
                 vessel.activate()
             else:
                 yield self.passivate()
-
-
-
-
 
 
 nodelist = ReadFromCSV.getNodes(nodeFile)   # Get list of nodes from the csv
@@ -441,7 +444,7 @@ for edge in edgelist:
         sim.AnimateLine(spec=(node1.x, node1.y, node2.x, node2.y), linewidth=2, linecolor='blue')
 
 for node in locknodes:
-    count = 0;
+    count = 0
     for neighbour in G.neighbors(node.id):
         node.ingangen[neighbour] = sim.Queue()
         node.neighbors[count] = neighbour
@@ -492,6 +495,7 @@ class VesselGenerator(sim.Component):
             id = id + 1
             yield self.hold(sim.Poisson(10).sample())
 
+
 print("start")
 VesselGenerator()
 print("vessels generated")
@@ -505,7 +509,7 @@ width = screen_x_max - x_start - 75
 for node in G.nodes():
     print(node)
 
-stuff = nx.check_planarity(G,False)
+stuff = nx.check_planarity(G, False)
 print(stuff[1].check_structure())
 for x in range(len(wait)):
     wait[x+1].length.animate(x=x_start, y=screen_y_max+20, horizontal_scale=2, width=(width) / len(wait), title='# vessels at node ' + str(x + 1))
