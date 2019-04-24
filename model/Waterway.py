@@ -21,6 +21,42 @@ def sidename(side):
 def distance(comp1, comp2):
     return math.sqrt((comp1.x - comp2.x) ** 2 + (comp1.y - comp2.y) ** 2)
 
+# verkeerslicht
+class Light(sim.Component):
+    def setup(self, id, x, y):
+        self.id = id
+        self.x =x
+        self.y = y
+        self.stop = False
+        sim.AnimateImage('../Pictures/verkeerslicht.png', x=self.x - 15, y=self.y - 15, width=40)
+        sim.Animate(circle0=2, x0=self.x, y0=self.y, fillcolor0=('black', 200), linewidth0=2, linecolor0='black')
+        sim.AnimateText(text=self.type + " " + str(self.id), font='narrow', textcolor='black', text_anchor='c',
+                        offsety=30, x=self.x, y=self.y)
+
+    def process(self):
+        count = 5
+        while True:
+            if len(wait[self.id]) != 0:
+                vessel = wait[self.id].pop()
+                wait[self.id].add_at_head(vessel)
+                if self.stop:
+                    yield self.hold(count)
+                    wait[self.id].pop()
+                    vessel.activate()
+                    self.stop = False
+                else:
+                    wait[self.id].pop()
+                    vessel.activate()
+            else:
+                if count > 0:
+                    count= count -1
+                    yield self.hold(1)
+                else:
+                    if(self.stop):
+                        self.stop = False
+                    else:
+                        self.stop = True
+                    count = 5
 
 # Lock component
 class Lock(sim.Component):
@@ -259,6 +295,7 @@ class Vessel(sim.Component):
                     x_speed = ((node.x - self.x) / dist) * self.speed
                     y_speed = ((node.y - self.y) / dist) * self.speed
                 else :
+
                     x_speed = 0
                     y_speed = 0
                 amount = round(dist / self.speed)
