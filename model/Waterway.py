@@ -6,8 +6,8 @@ import random
 import numpy as np
 
 # File vari
-nodeFile = "../files/nodes_real.csv"
-edgeFile = "../files/edges_real.csv"
+nodeFile = "../files/waterway_nodelist.csv"
+edgeFile = "../files/waterway_edgelist.csv"
 
 # Lock variables
 left = -1
@@ -23,15 +23,17 @@ def distance(comp1, comp2):
 
 # verkeerslicht
 class Light(sim.Component):
-    def setup(self, id, x, y):
+    def setup(self, id, x, y, type):
         self.id = id
         self.x =x
         self.y = y
+        self.type = type
         self.stop = False
-        sim.AnimateImage('../Pictures/verkeerslicht.png', x=self.x - 15, y=self.y - 15, width=40)
+        sim.AnimateImage('../Pictures/verkeerslicht.png', x=self.x - 12, y=self.y - 15, width=40)
         sim.Animate(circle0=2, x0=self.x, y0=self.y, fillcolor0=('black', 200), linewidth0=2, linecolor0='black')
         sim.AnimateText(text=self.type + " " + str(self.id), font='narrow', textcolor='black', text_anchor='c',
                         offsety=30, x=self.x, y=self.y)
+        self.lightsource = sim.AnimateImage('../Pictures/green-light.png', x=self.x - 15, y=self.y - 45, width=30)
 
     def process(self):
         count = 5
@@ -44,9 +46,16 @@ class Light(sim.Component):
                     wait[self.id].pop()
                     vessel.activate()
                     self.stop = False
+                    self.lightsource.remove()
+                    self.lightsource = sim.AnimateImage('../Pictures/green-light.png', x=self.x - 15, y=self.y - 45,
+                                                        width=30)
+                    count = 5
                 else:
                     wait[self.id].pop()
                     vessel.activate()
+
+
+
             else:
                 if count > 0:
                     count= count -1
@@ -54,8 +63,13 @@ class Light(sim.Component):
                 else:
                     if(self.stop):
                         self.stop = False
+                        self.lightsource.remove()
+                        self.lightsource = sim.AnimateImage('../Pictures/green-light.png', x=self.x - 15, y=self.y - 45, width=30)
                     else:
+                        self.lightsource.remove()
                         self.stop = True
+                        self.lightsource = sim.AnimateImage('../Pictures/red-light.png', x=self.x - 15, y=self.y - 45, width=30)
+
                     count = 5
 
 # Lock component
@@ -179,6 +193,7 @@ class Intersection(sim.Component):
         sim.AnimateImage('../Pictures/intersection_icon.png', x=self.x - 15, y=self.y - 15, width=30)
         sim.AnimateText(text=self.type + " " + str(self.id), font='narrow', textcolor='black', text_anchor='c',
                         offsety=30, x=self.x, y=self.y)
+
         self.vessels = []
         self.edgequeues = {}
         self.neighbours = {}
@@ -198,7 +213,7 @@ class Intersection(sim.Component):
 
                         if self.count[vessel] == 5:
                             print (self.count[vessel])
-                            if not currentnode[vessel.id] in uniqueEdgevessels:
+                            if not (currentnode[vessel.id] in uniqueEdgevessels):
                                 print("entered deadvessels")
                                 deadlockvessels.append(vessel)
                                 uniqueEdgevessels[currentnode[vessel.id]] = 1;
@@ -294,10 +309,12 @@ class Vessel(sim.Component):
                 if(dist != 0 ):
                     x_speed = ((node.x - self.x) / dist) * self.speed
                     y_speed = ((node.y - self.y) / dist) * self.speed
-                else :
+                else:
 
                     x_speed = 0
                     y_speed = 0
+
+                #amount is aantal sec voor de volgende node bereikt is
                 amount = round(dist / self.speed)
                 if amount > 5:
                     treshold = amount - 6
@@ -305,12 +322,15 @@ class Vessel(sim.Component):
                 else:
                     treshold = 0
                     count = 6 - amount
+
+                #treshold is het aantal sec dat de boot nog mag varen voor alleer in de 5 sec queue geplaatst wordt.
                 for x in range(0, amount-1):
                     self.x = self.x + x_speed;
                     self.y = self.y + y_speed;
 
                     self.pic_vessel.update(circle0=15, x0=self.x, y0=self.y,
                                            fillcolor0='', linecolor0=self.color, linewidth0=2)
+
                     if node.type.upper() == "INTERSECTION" and x >=treshold:
 
                         if(x == treshold):
@@ -324,6 +344,7 @@ class Vessel(sim.Component):
                         yield self.passivate()
                     else:
                         yield self.hold(1)
+
 
                 self.x = node.x
                 self.y = node.y
@@ -468,6 +489,8 @@ for node in nodelist:
         intersectnodes.append(node)
     elif node.type.upper() == 'DEFAULT':
         node = Node(name="Node " + str(node.id), id=node.id, x=realX, y=realY, type=node.type)
+    elif node.type.upper() == 'LIGHT':
+        node = Light(name="Node " + str(node.id), id=node.id, x=realX, y=realY, type=node.type)
     else:
         print(str(node.type) + ' is an invalid type')
     # Put the nodes in the dict
