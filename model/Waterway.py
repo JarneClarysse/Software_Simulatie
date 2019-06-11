@@ -1,19 +1,41 @@
 from model import ReadFromCSV
+import tkinter as tk
+from tkinter import simpledialog
 import salabim as sim
 import math
 import networkx as nx
 import random
+import ctypes
+user32 = ctypes.windll.user32
+screensize = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
+
+
 import numpy as np
-
+name = "test"
 # File vari
-nodeFile = "../files/waterway_nodelist.csv"
-edgeFile = "../files/waterway_edgelist.csv"
-
+if name == "test":
+    nodeFile = "../files/waterway_nodelist_modified.csv"
+    edgeFile = "../files/waterway_edgelist_modified.csv"
+elif name == "scen1":
+    nodeFile = "../files/scenario_nodes.csv"
+    edgeFile = "../files/edges_scenario_1.csv"
+elif name == "scen2":
+    nodeFile = "../files/scenario_nodes2.csv"
+    edgeFile = "../files/edges_scenario_2.csv"
+elif name == "scen3":
+    nodeFile = "../files/scenario_nodes3.csv"
+    edgeFile = "../files/edges_scenario_3.csv"
 # Lock variables
 left = -1
 right = +1
+opentijd = 5
+sluittijd = 5
+sink_raise_tijd = 10
 
+scen2afslag283 = 3
+scen2afslag673 = 5
 
+CEMT_turn_tijd = 5
 def sidename(side):
     return "l" if side == left else "r"
 
@@ -29,6 +51,121 @@ class Light(sim.Component):
         self.y = y
         self.type = type
         self.stop = False
+        self.cycle = 5
+        self.green = False
+        self.red = False
+        sim.AnimateImage('../Pictures/verkeerslicht.png', x=self.x - 12, y=self.y - 15, width=40)
+        sim.Animate(circle0=2, x0=self.x, y0=self.y, fillcolor0=('black', 200), linewidth0=2, linecolor0='black')
+        sim.AnimateText(text=self.type + " " + str(self.id), font='narrow', textcolor='black', text_anchor='c',
+                        offsety=30, x=self.x, y=self.y)
+        self.lightsource = sim.AnimateImage('../Pictures/green-light.png', x=self.x - 15, y=self.y - 45, width=30)
+        self.showing = False
+        self.button = sim.AnimateButton(x=self.x-50, y= self.y-30,fillcolor=(100,100,100),text="menu", width = 30,action=self.show_buttons)
+
+    def show_buttons(self):
+        if self.showing:
+            self.red_button.remove()
+            self.green_button.remove()
+            self.cycle_button.remove()
+            self.showing = False
+        else:
+            print("showing buttons")
+            self.red_button = self.button = sim.AnimateButton(x=self.x+100, y= self.y-30,fillcolor=(255,0,0),text="red", width = 30,action=self.always_red)
+            self.green_button = self.button = sim.AnimateButton(x=self.x+100, y= self.y-60,fillcolor=(0,255,0),text = "green",width = 30,action=self.always_green)
+            self.cycle_button = self.button = sim.AnimateButton(x=self.x+100, y= self.y-90,fillcolor=(128,128,128),text= "cycle", width = 30,action=self.adjust_cycle)
+            self.showing = True
+    def always_red(self):
+        if self.red:
+            self.red = False
+        else:
+            if self.green:
+                self.green = False
+            self.red = True
+            self.stop = True
+            self.lightsource.remove()
+            self.lightsource = sim.AnimateImage('../Pictures/red-light.png', x=self.x - 15, y=self.y - 45, width=30)
+
+    def always_green(self):
+        if self.green:
+            self.green = False
+        else:
+            if self.red:
+                self.red = False
+            self.green = True
+            self.stop = False
+            self.lightsource.remove()
+            self.lightsource = sim.AnimateImage('../Pictures/green-light.png', x=self.x - 15, y=self.y - 45, width=30)
+
+    def adjust_cycle(self):
+        answer = simpledialog.askstring("Cycle", "Enter new cycle")
+        if answer is not None:
+            self.cycle = int(answer)
+
+    def toggle(self):
+        if (self.stop):
+            self.stop = False
+            self.count = self.cycle
+            self.lightsource.remove()
+            self.lightsource = sim.AnimateImage('../Pictures/green-light.png', x=self.x - 15, y=self.y - 45, width=30)
+        else:
+            self.stop = True
+            self.count = self.cycle
+            self.lightsource.remove()
+            self.lightsource = sim.AnimateImage('../Pictures/red-light.png', x=self.x - 15, y=self.y - 45, width=30)
+        #sim.AnimateText(text="did action", font='narrow', textcolor='black', text_anchor='c',
+        #                offsety=30, x=self.x+30, y=self.y+30)
+    def process(self):
+        self.count = self.cycle
+        while True:
+            if not self.green and not self.red:
+                if len(wait[self.id]) != 0:
+                    vessel = wait[self.id].pop()
+                    wait[self.id].add_at_head(vessel)
+                    if self.stop:
+                        yield self.hold(self.count)
+                        wait[self.id].pop()
+                        vessel.activate()
+                        self.stop = False
+                        self.lightsource.remove()
+                        self.lightsource = sim.AnimateImage('../Pictures/green-light.png', x=self.x - 15, y=self.y - 45,
+                                                            width=30)
+                        self.count = self.cycle
+                    else:
+                        wait[self.id].pop()
+                        vessel.activate()
+
+
+
+                else:
+                    if self.count > 0:
+                        self.count= self.count -1
+                        yield self.hold(1)
+                    else:
+                        if(self.stop):
+                            self.stop = False
+                            self.lightsource.remove()
+                            self.lightsource = sim.AnimateImage('../Pictures/green-light.png', x=self.x - 15, y=self.y - 45, width=30)
+                        else:
+                            self.lightsource.remove()
+                            self.stop = True
+                            self.lightsource = sim.AnimateImage('../Pictures/red-light.png', x=self.x - 15, y=self.y - 45, width=30)
+
+                        self.count = self.cycle
+            elif self.green:
+                if len(wait[self.id]) != 0:
+                    vessel = wait[self.id].pop()
+                    vessel.activate()
+                yield self.hold(1)
+            else:
+                yield self.hold(1)
+
+class LightLock(sim.Component):
+    def setup(self, id, x, y, type):
+        self.id = id
+        self.x = x
+        self.y = y
+        self.type = type
+        self.stop = False
         sim.AnimateImage('../Pictures/verkeerslicht.png', x=self.x - 12, y=self.y - 15, width=40)
         sim.Animate(circle0=2, x0=self.x, y0=self.y, fillcolor0=('black', 200), linewidth0=2, linecolor0='black')
         sim.AnimateText(text=self.type + " " + str(self.id), font='narrow', textcolor='black', text_anchor='c',
@@ -36,41 +173,23 @@ class Light(sim.Component):
         self.lightsource = sim.AnimateImage('../Pictures/green-light.png', x=self.x - 15, y=self.y - 45, width=30)
 
     def process(self):
-        count = 5
         while True:
-            if len(wait[self.id]) != 0:
-                vessel = wait[self.id].pop()
-                wait[self.id].add_at_head(vessel)
-                if self.stop:
-                    yield self.hold(count)
-                    wait[self.id].pop()
-                    vessel.activate()
-                    self.stop = False
-                    self.lightsource.remove()
-                    self.lightsource = sim.AnimateImage('../Pictures/green-light.png', x=self.x - 15, y=self.y - 45,
-                                                        width=30)
-                    count = 5
-                else:
-                    wait[self.id].pop()
-                    vessel.activate()
-
-
-
+            #print("here we go again "+str(self.id))
+            if self.stop:
+                #print("i stopped")
+                yield self.hold(1)
+                #print("free after stop")
             else:
-                if count > 0:
-                    count= count -1
-                    yield self.hold(1)
-                else:
-                    if(self.stop):
-                        self.stop = False
-                        self.lightsource.remove()
-                        self.lightsource = sim.AnimateImage('../Pictures/green-light.png', x=self.x - 15, y=self.y - 45, width=30)
-                    else:
-                        self.lightsource.remove()
-                        self.stop = True
-                        self.lightsource = sim.AnimateImage('../Pictures/red-light.png', x=self.x - 15, y=self.y - 45, width=30)
-
-                    count = 5
+                #print("i did not")
+                #print(len(wait[self.id]))
+                for ves in wait[self.id]:
+                    # yield self.hold(5)
+                    ves = wait[self.id].pop()
+                    print("for: "+str(len(wait[self.id])))
+                    ves.activate()
+                #print("activated the nodes")
+                yield self.hold(1)
+            #print("free")
 
 # Lock component
 class Lock(sim.Component):
@@ -80,44 +199,84 @@ class Lock(sim.Component):
         self.y = y
         self.type = type
         self.maxLength = maxLength
-        sim.AnimateImage('../Pictures/lock.png', x=self.x - 15, y=self.y - 15, width=40)
+        sim.AnimateImage('../Pictures/lock.png', x=self.x - 10, y=self.y - 10, width=20)
         sim.Animate(circle0=2, x0=self.x, y0=self.y, fillcolor0=('black', 200), linewidth0=2, linecolor0='black')
-        sim.AnimateText(text=self.type + " " + str(self.id), font='narrow', textcolor='black', text_anchor='c',
-                        offsety=30, x=self.x, y=self.y)
-        self.currentlength = 0;
+        #sim.AnimateText(text=self.type + " " + str(self.id), font='narrow', textcolor='black', text_anchor='c',
+        #                offsety=30, x=self.x, y=self.y)
+        self.currentlength = 0
         print("test")
+        #de neighbors zijn alle aanliggende nodes van de sluis
+        #deze hebben een verschillend id. Er zijn n aantal neighbours
+        #om een volgorde te bepalen van deze buren wordt aan iedere node
+        #een getal van 0 tot n-1 gegeven deze komt overeen met
+        #het id nummer van de buur
         self.neighbors = {}
         self.ingangen = {}
         self.nodecount = 0
-        self.currentGate = 0;
+
+        #gate die we bekijken
+        self.currentGate = 0
+        self.openGate = -1
+        self.waterlevel = 1
         self.vessels = []
+        self.lights = []
+
+        self.info = sim.AnimateText(text="default" , font='narrow', textcolor='black', text_anchor='c',
+                        offsety=30, x=self.x+50, y=self.y-50)
+
+    def open_sluis(self):
+        self.openGate = self.currentGate
+        self.info.remove()
+        self.info = sim.AnimateText(text="opening gate "+ str(self.currentGate), font='narrow', textcolor='black', text_anchor='c',
+                        offsety=30, x=self.x+50, y=self.y-50)
+        self.hold(opentijd)
+
+    def sluit_sluis(self, gate=-1):
+        self.openGate = -1
+        if gate == -1:
+            gate = self.currentGate
+
+        self.info.remove()
+        self.info = sim.AnimateText(text="closing gate " + str(gate), font='narrow', textcolor='black',
+                                    text_anchor='c',
+                                    offsety=30, x=self.x+50, y=self.y-50)
+        self.hold(sluittijd)
+
+    def raise_lower_sluis(self):
+        self.info.remove()
+        self.info = sim.AnimateText(text="adjust water to " + str(self.currentGate), font='narrow', textcolor='black',
+                                    text_anchor='c',
+                                    offsety=30, x=self.x+50, y=self.y-50)
+        self.waterlevel = self.currentGate
+        self.hold(sink_raise_tijd)
 
 
     def process(self):
-        print("activated first")
-
-        print("neighbours")
 
         while True:
             count = 0
             while count < self.nodecount:
+                #overlopen boten aan ingang van de huidige gate
 
-                print("while loop")
-                print("currentgate: "+str(self.currentGate))
-                print("neighbors: "+str(self.neighbors[self.currentGate]))
-                print("ingangen: "+str(len(self.ingangen[self.neighbors[self.currentGate]])))
-                print("currentlength"+str(self.currentlength))
                 if len(self.ingangen[self.neighbors[self.currentGate]]):
-                    print("entered")
+                    #voor stoplichten horend bij de sluis
+
+                    if len(self.lights) != 0:
+                        for l in self.lights:
+                            l.stop = True
+                            l.lightsource.remove()
+                            l.lightsource = sim.AnimateImage('../Pictures/red-light.png', x=l.x - 15,
+                                                                y=l.y - 45, width=30)
+
                     vessel = self.ingangen[self.neighbors[self.currentGate]].pop()
                     stop = True
 
+                    added = False
                     #boten inladen vanuit deze ingang tot aan capaciteit voldaan is
                     while self.currentlength + vessel.length < self.maxLength+1 and stop:
                         if len(vessel.path)!=0:
                             self.vessels.append(vessel)
-                            vessel.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
-                                               fillcolor0='', linecolor0=vessel.color, linewidth0=2)
+                            added=True
                             self.currentlength = self.currentlength + vessel.length
                         else:
                             vessel.leave(wait[self.id])
@@ -128,43 +287,63 @@ class Lock(sim.Component):
                         else:
                             stop = False
 
-
-
-
                     if stop:
                         self.ingangen[self.neighbors[self.currentGate]].add_at_head(vessel)
-                    #processen invaren schepen
-                    yield self.hold(5)
+
+                    # indien sluis deur nog open is kunnen boten verder
+                    # doorvaren zonder vertraging. Anders zijn een aantal vertragingen nodig
+                    if added:
+                        if (self.openGate != self.currentGate):
+                            # indien een gate open staat sluit deze gate,
+                            # verlaag/verhoog waterniveau
+                            # open juiste sluisdeur
+
+                            if (self.openGate != -1):
+                                yield self.sluit_sluis(self.openGate)
+                                yield self.raise_lower_sluis()
+                                yield self.open_sluis()
+
+                            # indien geen sluis open staat controleer het waterniveau
+                            # indien nit gelijk met niveau huidige gate dan water aanpassen
+
+                            elif self.waterlevel != self.currentGate:
+                                yield self.raise_lower_sluis()
+                                yield self.open_sluis()
+                            # indien alle sluisdeuren dicht en waterniveau al juist
+                            # enkel nog sluisdeur opendoen
+
+                            else:
+                                yield self.open_sluis()
+
+                    for ves in self.vessels:
+
+                        ves.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
+                                                 fillcolor0='', linecolor0=vessel.color, linewidth0=2)
+                    #sluiten gate
+                    yield self.sluit_sluis()
                     #situatie bij nieuwe gate
                     count = 0
                 else:
-                    print("count1: "+str(count))
                     count = count + 1
 
-
-                print("count2: "+ str(count))
-                print("vessels length: "+ str(len(self.vessels)))
                 self.currentGate = (self.currentGate + 1) % self.nodecount
 
+                #kijken of boten uit de nieuwe gate moeten varen zo ja laat uitvaren
                 if len(self.vessels) != 0:
                     #vullen/ legen sluis en openen lock
-                    yield self.hold(10)
+
 
                     tempvessels = []
-                    uitvaart = False
+                    varendevessels = []
+                    #uitvaart = False
                     for vessel in self.vessels:
                         if len(vessel.path) != 0:
-                            print("vessel first on path" + str(vessel.path[(len(vessel.path)-1)]))
-                            print(vessel.path)
-                            print("node from gate" + str(self.neighbors[self.currentGate]))
-                            print("opened gate: "+str(self.currentGate))
+
                             if vessel.path[(len(vessel.path)-1)] == self.neighbors[self.currentGate]:
-                                print("releasing vessel: "+str(vessel.id))
 
                                 self.currentlength = self.currentlength - vessel.length
-                                vessel.leave(wait[self.id])
-                                vessel.activate()
-                                uitvaart = True
+                                varendevessels.append(vessel)
+
                             else:
                                 tempvessels.append(vessel)
                         else:
@@ -172,15 +351,26 @@ class Lock(sim.Component):
                             vessel.leave(wait[self.id])
                             vessel.activate()
                     self.vessels = tempvessels
-                    print("count3: " + str(count))
                     count = 0
 
-                    if uitvaart:
+                    if len(varendevessels)!=0:
+                        yield self.raise_lower_sluis()
+                        yield self.open_sluis()
+                        for vessel in varendevessels:
+                            vessel.leave(wait[self.id])
+                            vessel.activate()
                         #uitvaren schepen
-                        yield self.hold(5)
-                print("count4: "+ str(count))
+                        waiting = len(wait[self.id])
+                        for ing in self.ingangen:
+                            waiting += len(self.ingangen[ing])
+                        if(waiting==0):
+                            if len(self.lights) != 0:
+                                for l in self.lights:
+                                    l.stop = False
+                                    l.lightsource.remove()
+                                    l.lightsource = sim.AnimateImage('../Pictures/green-light.png', x=l.x - 15,
+                                                                        y=l.y - 45, width=30)
             yield self.passivate()
-            print("activated?")
 
 
 # Intersection component
@@ -190,9 +380,9 @@ class Intersection(sim.Component):
         self.x = x
         self.y = y
         self.type = type
-        sim.AnimateImage('../Pictures/intersection_icon.png', x=self.x - 15, y=self.y - 15, width=30)
-        sim.AnimateText(text=self.type + " " + str(self.id), font='narrow', textcolor='black', text_anchor='c',
-                        offsety=30, x=self.x, y=self.y)
+        #sim.AnimateImage('../Pictures/intersection_icon.png', x=self.x - 15, y=self.y - 15, width=30)
+        #sim.AnimateText(text=self.type + " " + str(self.id), font='narrow', textcolor='black', text_anchor='c',
+        #                offsety=30, x=self.x, y=self.y)
 
         self.vessels = []
         self.edgequeues = {}
@@ -205,7 +395,6 @@ class Intersection(sim.Component):
                 deadlockvessels = []
                 uniqueEdgevessels = {}
                 yield self.hold(1)
-                print("here we go again")
                 for vessel in self.vessels:
                     rechterqueue = self.edgequeues[self.neighbours[currentnode[vessel.id]]]
 
@@ -241,9 +430,10 @@ class Bridge(sim.Component):
         self.x = x
         self.y = y
         self.type = type
-        sim.AnimateImage('../Pictures/bridge_icon.png', x=self.x - 15, y=self.y - 15, width=30)
-        sim.AnimateText(text=self.type + " " + str(self.id), font='narrow', textcolor='black', text_anchor='c',
-                        offsety=30, x=self.x, y=self.y)
+        sim.AnimateImage('../Pictures/bridge_icon.png', x=self.x - 10, y=self.y - 10, width=20)
+        #sim.AnimateText(text=self.type + " " + str(self.id), font='narrow', textcolor='black', text_anchor='c',
+        #                offsety=30, x=self.x, y=self.y)
+
         self.closed = True
         self.height = height
 
@@ -255,9 +445,21 @@ class Bridge(sim.Component):
                 wait[self.id].add_at_head(vessel)
                 if vessel.height > self.height:
                     if self.closed:
-                        yield self.hold(5)
-                        wait[self.id].pop()
-                        vessel.activate()
+                        waiting_boats = []
+                        waiting_boats.append(vessel)
+                        for x in range(0,5):
+                            for vessel2 in wait[self.id]:
+                                if vessel2.height < self.height:
+                                    wait[self.id].remove(vessel2)
+                                    vessel2.activate()
+                                elif not waiting_boats.__contains__(vessel2):
+                                    waiting_boats.append(vessel2)
+                            yield self.hold(1)
+
+                        for ves in waiting_boats:
+                            print("removing boat: "+ str(ves.id))
+                            wait[self.id].remove(ves)
+                            vessel.activate()
                         self.closed = False
                     else:
                         wait[self.id].pop()
@@ -266,6 +468,11 @@ class Bridge(sim.Component):
                 else:
                     wait[self.id].pop()
                     vessel.activate()
+                    if not self.closed:
+                        if count > 0:
+                            count = count - 1
+                        else:
+                            self.closed = True
 
             else:
                 if count > 0:
@@ -281,6 +488,271 @@ class Narrowing(sim.Component):
     def process(self):
         pass
 
+class Knoop1(sim.Component):
+    def setup(self, id, x, y, type):
+        self.id = id
+        self.x = x
+        self.y = y
+        self.type = type
+        sim.Animate(circle0=2, x0=self.x, y0=self.y, fillcolor0=('black', 200), linewidth0=2, linecolor0='black')
+
+    def process(self):
+        while True:
+            if len(wait[self.id]) != 0:
+                yield self.hold(5)
+                vessel = wait[self.id].pop()
+                vessel.activate()
+            else:
+                yield self.passivate()
+
+class Knoop2(sim.Component):
+    def setup(self, id, x, y, type):
+        self.id = id
+        self.x = x
+        self.y = y
+        self.type = type
+        sim.Animate(circle0=2, x0=self.x, y0=self.y, fillcolor0=('black', 200), linewidth0=2, linecolor0='black')
+        self.Q0 = sim.Queue()
+        self.Q1 = sim.Queue()
+        self.Q2 = sim.Queue()
+    def process(self):
+        while True:
+            if len(wait[self.id]) != 0:
+
+                if len(self.Q1)!=0:
+                    print("inside Q1")
+                    vessel = self.Q1.pop()
+                    abort = False
+                    while vessel.path[(len(vessel.path)-1)] == 3 and not abort:
+                        print("next location is 3")
+                        wait[self.id].remove(vessel)
+                        vessel.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
+                                              fillcolor0='', linecolor0=vessel.color, linewidth0=2)
+
+                        vessel.activate()
+                        if len(self.Q1) != 0:
+                            vessel = self.Q1.pop()
+                        else:
+                            abort = True
+
+                    if vessel.path[(len(vessel.path) - 1)] != 3:
+                        self.Q1.add_at_head(vessel)
+
+
+
+
+                if len(self.Q0)!=0:
+                    vessel = self.Q0.pop()
+
+                    abort=False
+                    while vessel.path[(len(vessel.path)-1)] == 67 and not abort:
+                        wait[self.id].remove(vessel)
+                        vessel.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
+                                                 fillcolor0='', linecolor0=vessel.color, linewidth0=2)
+
+                        vessel.activate()
+                        if len(self.Q0)!=0:
+                            vessel = self.Q0.pop()
+                        else:
+                            abort = True
+                    if vessel.path[(len(vessel.path) - 1)] != 67:
+                        self.Q0.add_at_head(vessel)
+
+                if len(self.Q1) != 0:
+                    print("inside Q1 again")
+                    vessel = self.Q1.pop()
+                    if vessel.path[(len(vessel.path)-1)] == 283:
+                        vessel.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
+                                                 fillcolor0='', linecolor0=vessel.color, linewidth0=2)
+
+                        yield self.hold(scen2afslag283)
+                        wait[self.id].remove(vessel)
+                        vessel.activate()
+                elif len(self.Q2) != 0:
+                    vessel = self.Q2.pop()
+                    vessel.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
+                                             fillcolor0='', linecolor0=vessel.color, linewidth0=2)
+
+                    yield self.hold(scen2afslag673)
+                    wait[self.id].remove(vessel)
+                    vessel.activate()
+                elif len(self.Q0)!=0:
+                    vessel = self.Q0.pop()
+                    if vessel.path[(len(vessel.path)-1)] == 283:
+                        vessel.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
+                                                 fillcolor0='', linecolor0=vessel.color, linewidth0=2)
+
+                        yield self.hold(scen2afslag283)
+                        wait[self.id].remove(vessel)
+                        vessel.activate()
+
+
+            else:
+                yield self.passivate()
+
+class Knoop3(sim.Component):
+    def setup(self, id, x, y, type):
+        self.id = id
+        self.x = x
+        self.y = y
+        self.type = type
+        sim.Animate(circle0=2, x0=self.x, y0=self.y, fillcolor0=('black', 200), linewidth0=2, linecolor0='black')
+        self.Q0 = sim.Queue()
+        self.Q1 = sim.Queue()
+        self.Q2 = sim.Queue()
+
+    def process(self):
+        while True:
+            while len(wait[self.id])!=0:
+                CEMT = False
+                if len(self.Q1) !=0:
+                    vessel = self.Q1.pop()
+                    if vessel.CEMT == 5:
+                        if vessel.path[(len(vessel.path)-1)] == 285:
+                            CEMT = True
+                            abort = False
+                            while len(self.Q0)!=0 and not abort:
+                                vessel2 = self.Q0.pop()
+                                if vessel2.CEMT <3:
+                                    vessel2.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
+                                                             fillcolor0='', linecolor0=vessel.color, linewidth0=2)
+
+                                    wait[self.id].remove(vessel2)
+                                    vessel2.activate()
+                                else:
+                                    abort = True
+                                    self.Q0.add_at_head(vessel2)
+                            abort = False
+                            while len(self.Q2)!=0 and not abort:
+                                vessel2 = self.Q2.pop()
+                                if vessel2.CEMT <3:
+                                    vessel2.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
+                                                             fillcolor0='', linecolor0=vessel.color, linewidth0=2)
+
+                                    wait[self.id].remove(vessel2)
+                                    vessel2.activate()
+                                else:
+                                    abort = True
+                                    self.Q2.add_at_head(vessel2)
+                            vessel.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
+                                                     fillcolor0='', linecolor0=vessel.color, linewidth0=2)
+
+                            yield self.hold(CEMT_turn_tijd)
+                            wait[self.id].remove(vessel)
+                            vessel.activate()
+                        else:
+                            vessel.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
+                                                     fillcolor0='', linecolor0=vessel.color, linewidth0=2)
+
+                            wait[self.id].remove(vessel)
+                            vessel.activate()
+
+                    else:
+                        vessel.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
+                                                 fillcolor0='', linecolor0=vessel.color, linewidth0=2)
+
+                        wait[self.id].remove(vessel)
+                        vessel.activate()
+                if len(self.Q2) !=0 and not CEMT:
+                    vessel = self.Q2.pop()
+                    if vessel.CEMT == 5:
+                        if vessel.path[(len(vessel.path)-1)] == 285:
+                            CEMT = True
+                            abort = False
+                            while len(self.Q0)!=0 and not abort:
+                                vessel2 = self.Q0.pop()
+                                if vessel2.CEMT <3:
+                                    vessel2.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
+                                                             fillcolor0='', linecolor0=vessel.color, linewidth0=2)
+
+                                    wait[self.id].remove(vessel2)
+                                    vessel2.activate()
+                                else:
+                                    abort = True
+                                    self.Q0.add_at_head(vessel2)
+                            abort = False
+                            while len(self.Q1)!=0 and not abort:
+                                vessel2 = self.Q1.pop()
+                                if vessel2.CEMT <3:
+                                    vessel2.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
+                                                             fillcolor0='', linecolor0=vessel.color, linewidth0=2)
+
+                                    wait[self.id].remove(vessel2)
+                                    vessel2.activate()
+                                else:
+                                    abort = True
+                                    self.Q1.add_at_head(vessel2)
+                            vessel.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
+                                                     fillcolor0='', linecolor0=vessel.color, linewidth0=2)
+
+                            yield self.hold(CEMT_turn_tijd)
+                            wait[self.id].remove(vessel)
+                            vessel.activate()
+                        else:
+                            vessel.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
+                                                     fillcolor0='', linecolor0=vessel.color, linewidth0=2)
+
+                            wait[self.id].remove(vessel)
+                            vessel.activate()
+
+                    else:
+                        vessel.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
+                                                 fillcolor0='', linecolor0=vessel.color, linewidth0=2)
+
+                        wait[self.id].remove(vessel)
+                        vessel.activate()
+
+
+                if len(self.Q0) !=0 and not CEMT:
+                    vessel = self.Q0.pop()
+                    if vessel.CEMT == 5:
+                        if vessel.path[(len(vessel.path)-1)] == 285:
+                            CEMT = True
+                            abort = False
+                            while len(self.Q2)!=0 and not abort:
+                                vessel2 = self.Q2.pop()
+                                if vessel2.CEMT <3:
+                                    vessel2.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
+                                                             fillcolor0='', linecolor0=vessel.color, linewidth0=2)
+
+                                    wait[self.id].remove(vessel2)
+                                    vessel2.activate()
+                                else:
+                                    abort = True
+                                    self.Q2.add_at_head(vessel2)
+                            abort = False
+                            while len(self.Q1)!=0 and not abort:
+                                vessel2 = self.Q1.pop()
+                                if vessel2.CEMT <3:
+                                    vessel2.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
+                                                             fillcolor0='', linecolor0=vessel.color, linewidth0=2)
+
+                                    wait[self.id].remove(vessel2)
+                                    vessel2.activate()
+                                else:
+                                    abort = True
+                                    self.Q1.add_at_head(vessel2)
+                            vessel.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
+                                                     fillcolor0='', linecolor0=vessel.color, linewidth0=2)
+
+                            yield self.hold(CEMT_turn_tijd)
+                            wait[self.id].remove(vessel)
+                            vessel.activate()
+                        else:
+                            vessel.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
+                                                     fillcolor0='', linecolor0=vessel.color, linewidth0=2)
+
+                            wait[self.id].remove(vessel)
+                            vessel.activate()
+
+                    else:
+                        vessel.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
+                                                 fillcolor0='', linecolor0=vessel.color, linewidth0=2)
+
+                        wait[self.id].remove(vessel)
+                        vessel.activate()
+
+            yield self.passivate()
 
 class Vessel(sim.Component):
     def setup(self, id, speed, path, length,height):
@@ -295,6 +767,7 @@ class Vessel(sim.Component):
         self.length = length
         self.height = height
 
+        self.CEMT = 5
     #def hold(self, time):
     #   yield self.hold(time)
 
@@ -322,9 +795,10 @@ class Vessel(sim.Component):
                 else:
                     treshold = 0
                     count = 6 - amount
-
+                #print("vessel is stuck")
                 #treshold is het aantal sec dat de boot nog mag varen voor alleer in de 5 sec queue geplaatst wordt.
                 for x in range(0, amount-1):
+                    #print("here we go")
                     self.x = self.x + x_speed;
                     self.y = self.y + y_speed;
 
@@ -367,6 +841,25 @@ class Vessel(sim.Component):
                     oldnode = currentnode[self.id]
                     self.pic_vessel.update(circle0=15, x0=self.x, y0=self.y,
                                            fillcolor0='', linecolor0=self.color, linewidth0=2)
+                elif node.type.upper() == "SCEN1KNOT" and len(wait[node.id])>1:
+                    print("waiting outside")
+                elif node.type.upper() == "SCEN2KNOT":
+                    print(currentnode[self.id])
+                    if currentnode[self.id]== 3:
+                        self.enter(node.Q0)
+                    elif currentnode[self.id]==67:
+                        print("entered Q1")
+                        self.enter(node.Q1)
+                    elif currentnode[self.id] == 283:
+                        self.enter(node.Q2)
+                elif node.type.upper() == "SCEN3KNOT":
+                    if currentnode[self.id]== 71:
+                        self.enter(node.Q0)
+                    elif currentnode[self.id]==4:
+                        print("entered Q1")
+                        self.enter(node.Q1)
+                    elif currentnode[self.id] == 285:
+                        self.enter(node.Q2)
                 else:
                     self.pic_vessel.update(circle0=15, x0=self.x, y0=self.y,
                                            fillcolor0='', linecolor0=self.color, linewidth0=2)
@@ -376,7 +869,6 @@ class Vessel(sim.Component):
                     node.activate()
 
                 yield self.passivate()
-
                 if(node.type.upper() =="INTERSECTION"):
                     print("jeweetzelf+"+str(self.id))
                     print("oldnode: "+str(oldnode))
@@ -401,7 +893,7 @@ class Node(sim.Component):
         self.type = type
 
         sim.Animate(circle0=2, x0=self.x, y0=self.y, fillcolor0=('black', 200),linewidth0=2, linecolor0='black')
-        sim.AnimateText(text=self.type+" "+str(self.id), font='narrow', textcolor='black', text_anchor='c', offsety=30, x=self.x,y=self.y)
+        #sim.AnimateText(text=self.type+" "+str(self.id), font='narrow', textcolor='black', text_anchor='c', offsety=30, x=self.x,y=self.y)
 
     def process(self):
         while True:
@@ -423,16 +915,24 @@ G = nx.Graph()  # Generate graph
 env = sim.Environment(trace=False)   # Print the stack trace
 
 # Settings for the visualization
-screen_x_min = 25
-screen_x_max = 1000
+screen_x_min = 50
+screen_x_max = 900
 screen_x_width = screen_x_max - screen_x_min
-screen_y_min = 25
-screen_y_max = 550
+screen_y_min = 50
+screen_y_max = 600
 screen_y_width = screen_y_max - screen_y_min
 
 # Visualize the background
-sim.AnimateRectangle((screen_x_min, screen_y_min, screen_x_max, screen_y_max), fillcolor='90%gray')
-sim.AnimateImage('../Pictures/layout2.png', x=screen_x_min, y=screen_y_min)
+sim.AnimateRectangle((0,0, screen_x_max, screen_y_max), fillcolor='90%gray')
+if name == "test":
+    sim.AnimateImage('../Pictures/layout.png', x=0, y=27, width=940)
+elif name == "scen1":
+    sim.AnimateImage('../Files/scenario1.png', x=0, y=27, width=940)
+elif name == "scen2":
+    sim.AnimateImage('../Files/scenario2.png', x=0, y=27, width=940)
+elif name == "scen3":
+    sim.AnimateImage('../Files/scenario3.png', x=0, y=27, width=940)
+
 
 # Dict to map a vessel's current node
 currentnode = {}
@@ -469,18 +969,22 @@ y_coordinate_unit = (screen_y_width) / nodes_height
 
 locknodes = []
 intersectnodes = []
+lightLocks = []
 # Iterate over the nodes and make a queue for each node
+
+
+
 for node in nodelist:
     # Make a queue for each node
     wait[int(node.id)] = sim.Queue(name='Queue node ' + str(node.id))
 
     # Determine real x and y pos
     realX = (node.x - node_x_min) * x_coordinate_unit + screen_x_min
-    realY = (node.y - node_y_min) * y_coordinate_unit + screen_y_min
+    realY = ((node.y-node_y_min ) * y_coordinate_unit + screen_y_min)
 
     # Determine node type
     if node.type.upper()=='BRIDGE':
-        node = Bridge(name="Node " + str(node.id), id=node.id, x=realX, y=realY, type=node.type,height = 50)
+        node = Bridge(name="Node " + str(node.id), id=node.id, x=realX, y=realY, type=node.type, height = 650)
     elif node.type.upper()=='LOCK':
         node = Lock(name="Node " + str(node.id), id=node.id, x=realX, y=realY, type=node.type, maxLength=15);
         locknodes.append(node)
@@ -491,12 +995,23 @@ for node in nodelist:
         node = Node(name="Node " + str(node.id), id=node.id, x=realX, y=realY, type=node.type)
     elif node.type.upper() == 'LIGHT':
         node = Light(name="Node " + str(node.id), id=node.id, x=realX, y=realY, type=node.type)
+    elif node.type.upper() == 'LIGHTLOCK':
+        node = LightLock(name="Node " + str(node.id), id=node.id, x=realX, y=realY, type=node.type)
+        lightLocks.append(node)
+    elif node.type.upper() == "SCEN1KNOT":
+        node = Knoop1(name="Node " + str(node.id), id=node.id, x=realX, y=realY, type=node.type)
+    elif node.type.upper() == "SCEN2KNOT":
+        node = Knoop2(name="Node " + str(node.id), id=node.id, x=realX, y=realY, type=node.type)
+    elif node.type.upper() == "SCEN3KNOT":
+        node = Knoop3(name="Node " + str(node.id), id=node.id, x=realX, y=realY, type=node.type)
+
     else:
         print(str(node.type) + ' is an invalid type')
     # Put the nodes in the dict
     nodes[node.id] = node
 
 
+nodes[3].lights = lightLocks
 for edge in edgelist:
     # Only if those edges have nodes in the corresponding file
     if edge.node1 in nodes and edge.node2 in nodes:
@@ -505,7 +1020,7 @@ for edge in edgelist:
         # Add to the graph
         G.add_edge(edge.node1, edge.node2)
         # Animate the edges of the graph
-        sim.AnimateLine(spec=(node1.x, node1.y, node2.x, node2.y), linewidth=2, linecolor='blue')
+        sim.AnimateLine(spec=(node2.x, node2.y, node1.x, node1.y), linewidth=2, linecolor='blue')
 
 for node in locknodes:
     count = 0
@@ -530,6 +1045,7 @@ for node in intersectnodes:
     node.neighbours[firstneighbour]=previousneighbour
 
 
+
 class VesselGenerator(sim.Component):
     def process(self):
         id = 0;
@@ -537,7 +1053,12 @@ class VesselGenerator(sim.Component):
             # Set the current node of the vessel
             # currentnode[vessel.id] = vessel.path.pop(0)
             # Generate random starting and ending node
-            vesselStartAndEnd = random.sample(nodelist, 2)
+            customized_nodelist = []
+            for no in nodelist:
+                if no.type.upper() != 'LIGHTLOCK' and no.type.upper() != "LOCK" and no.type.upper() != "SCEN3KNOT" and no.type.upper() != "SCEN2KNOT" and no.type.upper() != "SCEN1KNOT":
+                    customized_nodelist.append(no)
+
+            vesselStartAndEnd = random.sample(customized_nodelist, 2)
             print(str(vesselStartAndEnd[0].id) + " tester " + str(vesselStartAndEnd[1].id))
             # Generated path between vessels
             paths_between_generator = nx.all_simple_paths(G, source=vesselStartAndEnd[1].id,
@@ -554,8 +1075,9 @@ class VesselGenerator(sim.Component):
             print(currentnode[id])
             # Generate new vessel
             print(nodes_between_set)
-            random_int = random.randint(0, 2)
-            Vessel(name="Vessel " + str(id), id=id, speed=int(vessels[random_int].speed), path=nodes_between_set,length=5, height=60)
+            random_int = random.randint(0, 59)
+            random_height = random.randint(200,1100)
+            Vessel(name="Vessel " + str(id), id=id, speed=int(vessels[random_int].speed), path=nodes_between_set,length=5, height=int(random_height))
             id = id + 1
             yield self.hold(sim.Poisson(10).sample())
 
@@ -563,12 +1085,15 @@ class VesselGenerator(sim.Component):
 print("start")
 VesselGenerator()
 print("vessels generated")
+env.an_synced_buttons()
+env.an_unsynced_buttons()
 env.animate(True)
 env.speed(5)
 env.modelname('Alsic Simulation')
-
+env.height(screensize[1])
+env.width(screensize[0])
 x_start = screen_x_min
-width = screen_x_max - x_start - 75
+width = screen_x_max
 
 for node in G.nodes():
     print(node)

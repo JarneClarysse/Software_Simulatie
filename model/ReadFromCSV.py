@@ -33,7 +33,7 @@ def getNodes(nodeFile):
         x = nlrow['Latitude']
         y = nlrow['Longitude']
         type = nlrow['Type']
-        node_list.append(Node(id, x, y, type))
+        node_list.append(Node(id, y, x, type))
 
     # Return nodelist
     return node_list
