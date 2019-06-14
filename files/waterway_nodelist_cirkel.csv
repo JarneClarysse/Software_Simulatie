@@ -1,0 +1,10 @@
+Id;Latitude;Longitude;Type
+1;50;300;Bridge
+2;250;350;Lock
+3;500;400;Lock
+4;750;500;Lock
+5;750;100;Lock
+6;900;100;Lock
+7;250;60;Lock
+8;500;80;Lock
+9;900;300;Lock

@@ -1,4 +1,5 @@
 from model import ReadFromCSV
+import os
 import tkinter as tk
 from tkinter import simpledialog
 import salabim as sim
@@ -6,12 +7,14 @@ import math
 import networkx as nx
 import random
 import ctypes
+import sys
 user32 = ctypes.windll.user32
 screensize = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
+onlineLookup = 0#int(sys.argv[1])
 
 
 import numpy as np
-name = "test"
+name = "splitsing"
 # File vari
 if name == "test":
     nodeFile = "../files/waterway_nodelist_modified.csv"
@@ -25,6 +28,12 @@ elif name == "scen2":
 elif name == "scen3":
     nodeFile = "../files/scenario_nodes3.csv"
     edgeFile = "../files/edges_scenario_3.csv"
+elif name == "cirkel":
+    nodeFile = "../files/waterway_nodelist_cirkel.csv"
+    edgeFile = "../files/waterway_edgelist_cirkel.csv"
+elif name == "splitsing" :
+    nodeFile = "../files/nodetest.csv"
+    edgeFile = "../files/edgestest.csv"
 # Lock variables
 left = -1
 right = +1
@@ -61,6 +70,7 @@ class Light(sim.Component):
         self.lightsource = sim.AnimateImage('../Pictures/green-light.png', x=self.x - 15, y=self.y - 45, width=30)
         self.showing = False
         self.button = sim.AnimateButton(x=self.x-50, y= self.y-30,fillcolor=(100,100,100),text="menu", width = 30,action=self.show_buttons)
+        self.available=True
 
     def show_buttons(self):
         if self.showing:
@@ -124,7 +134,6 @@ class Light(sim.Component):
                     if self.stop:
                         yield self.hold(self.count)
                         wait[self.id].pop()
-                        vessel.activate()
                         self.stop = False
                         self.lightsource.remove()
                         self.lightsource = sim.AnimateImage('../Pictures/green-light.png', x=self.x - 15, y=self.y - 45,
@@ -132,7 +141,6 @@ class Light(sim.Component):
                         self.count = self.cycle
                     else:
                         wait[self.id].pop()
-                        vessel.activate()
 
 
 
@@ -154,7 +162,6 @@ class Light(sim.Component):
             elif self.green:
                 if len(wait[self.id]) != 0:
                     vessel = wait[self.id].pop()
-                    vessel.activate()
                 yield self.hold(1)
             else:
                 yield self.hold(1)
@@ -171,6 +178,7 @@ class LightLock(sim.Component):
         sim.AnimateText(text=self.type + " " + str(self.id), font='narrow', textcolor='black', text_anchor='c',
                         offsety=30, x=self.x, y=self.y)
         self.lightsource = sim.AnimateImage('../Pictures/green-light.png', x=self.x - 15, y=self.y - 45, width=30)
+        self.available = True
 
     def process(self):
         while True:
@@ -223,6 +231,25 @@ class Lock(sim.Component):
 
         self.info = sim.AnimateText(text="default" , font='narrow', textcolor='black', text_anchor='c',
                         offsety=30, x=self.x+50, y=self.y-50)
+        self.available = True
+        if self.available:
+            self.button = sim.AnimateButton(x=self.x - 0, y=self.y - 30, fillcolor=(0, 128, 0), text="Av.", width=30,
+                                            action=self.show_buttons)
+        else:
+            self.button = sim.AnimateButton(x=self.x - 0, y=self.y - 30, fillcolor=(255, 0, 0), text="Av.", width=30,
+                                            action=self.show_buttons)
+
+    def show_buttons(self):
+        if self.available:
+            self.available = False
+            self.button = sim.AnimateButton(x=self.x - 0, y=self.y - 30, fillcolor=(255, 0, 0), text="Av.",
+                                            width=30,
+                                            action=self.show_buttons)
+        else:
+            self.available = True
+            self.button = sim.AnimateButton(x=self.x - 0, y=self.y - 30, fillcolor=(0, 128, 0), text="Av.",
+                                            width=30,
+                                            action=self.show_buttons)
 
     def open_sluis(self):
         self.openGate = self.currentGate
@@ -280,7 +307,6 @@ class Lock(sim.Component):
                             self.currentlength = self.currentlength + vessel.length
                         else:
                             vessel.leave(wait[self.id])
-                            vessel.activate()
                         #ophalen nieuwe boot
                         if (len(self.ingangen[self.neighbors[self.currentGate]]) != 0):
                             vessel = self.ingangen[self.neighbors[self.currentGate]].pop()
@@ -349,7 +375,6 @@ class Lock(sim.Component):
                         else:
                             self.currentlength = self.currentlength - vessel.length
                             vessel.leave(wait[self.id])
-                            vessel.activate()
                     self.vessels = tempvessels
                     count = 0
 
@@ -358,7 +383,6 @@ class Lock(sim.Component):
                         yield self.open_sluis()
                         for vessel in varendevessels:
                             vessel.leave(wait[self.id])
-                            vessel.activate()
                         #uitvaren schepen
                         waiting = len(wait[self.id])
                         for ing in self.ingangen:
@@ -372,7 +396,7 @@ class Lock(sim.Component):
                                                                         y=l.y - 45, width=30)
             yield self.passivate()
 
-
+"""
 # Intersection component
 class Intersection(sim.Component):
     def setup(self, id, x, y, type):
@@ -420,7 +444,7 @@ class Intersection(sim.Component):
 
             else:
                 yield self.passivate()
-
+"""
 
 # Bridge component
 class Bridge(sim.Component):
@@ -436,6 +460,25 @@ class Bridge(sim.Component):
 
         self.closed = True
         self.height = height
+        self.available = True
+        if self.available:
+            self.button = sim.AnimateButton(x=self.x - 0, y=self.y - 30, fillcolor=(0, 128, 0), text="Av.", width=30,
+                                            action=self.show_buttons)
+        else:
+            self.button = sim.AnimateButton(x=self.x - 0, y=self.y - 30, fillcolor=(255, 0, 0), text="Av.", width=30,
+                                            action=self.show_buttons)
+
+    def show_buttons(self):
+        if self.available:
+            self.available = False
+            self.button = sim.AnimateButton(x=self.x - 0, y=self.y - 30, fillcolor=(255, 0, 0), text="Av.",
+                                            width=30,
+                                            action=self.show_buttons)
+        else:
+            self.available = True
+            self.button = sim.AnimateButton(x=self.x - 0, y=self.y - 30, fillcolor=(0, 128, 0), text="Av.",
+                                            width=30,
+                                            action=self.show_buttons)
 
     def process(self):
         count = 0
@@ -459,15 +502,12 @@ class Bridge(sim.Component):
                         for ves in waiting_boats:
                             print("removing boat: "+ str(ves.id))
                             wait[self.id].remove(ves)
-                            vessel.activate()
                         self.closed = False
                     else:
                         wait[self.id].pop()
-                        vessel.activate()
                     count = 10
                 else:
                     wait[self.id].pop()
-                    vessel.activate()
                     if not self.closed:
                         if count > 0:
                             count = count - 1
@@ -494,14 +534,32 @@ class Knoop1(sim.Component):
         self.x = x
         self.y = y
         self.type = type
+        self.available = True
         sim.Animate(circle0=2, x0=self.x, y0=self.y, fillcolor0=('black', 200), linewidth0=2, linecolor0='black')
+        if self.available:
+            self.button = sim.AnimateButton(x=self.x - 0, y=self.y - 30, fillcolor=(0, 128, 0), text="Av.", width=30,
+                                            action=self.show_buttons)
+        else:
+            self.button = sim.AnimateButton(x=self.x - 0, y=self.y - 30, fillcolor=(255, 0, 0), text="Av.", width=30,
+                                            action=self.show_buttons)
+
+    def show_buttons(self):
+        if self.available:
+            self.available = False
+            self.button = sim.AnimateButton(x=self.x - 0, y=self.y - 30, fillcolor=(255, 0, 0), text="Av.",
+                                            width=30,
+                                            action=self.show_buttons)
+        else:
+            self.available = True
+            self.button = sim.AnimateButton(x=self.x - 0, y=self.y - 30, fillcolor=(0, 128, 0), text="Av.",
+                                            width=30,
+                                            action=self.show_buttons)
 
     def process(self):
         while True:
             if len(wait[self.id]) != 0:
                 yield self.hold(5)
                 vessel = wait[self.id].pop()
-                vessel.activate()
             else:
                 yield self.passivate()
 
@@ -511,10 +569,29 @@ class Knoop2(sim.Component):
         self.x = x
         self.y = y
         self.type = type
+        self.available = True
         sim.Animate(circle0=2, x0=self.x, y0=self.y, fillcolor0=('black', 200), linewidth0=2, linecolor0='black')
         self.Q0 = sim.Queue()
         self.Q1 = sim.Queue()
         self.Q2 = sim.Queue()
+        if self.available:
+            self.button = sim.AnimateButton(x=self.x - 0, y=self.y - 30, fillcolor=(0, 128, 0), text="Av.", width=30,
+                                            action=self.show_buttons)
+        else:
+            self.button = sim.AnimateButton(x=self.x - 0, y=self.y - 30, fillcolor=(255, 0, 0), text="Av.", width=30,
+                                            action=self.show_buttons)
+
+    def show_buttons(self):
+        if self.available:
+            self.available = False
+            self.button = sim.AnimateButton(x=self.x - 0, y=self.y - 30, fillcolor=(255, 0, 0), text="Av.",
+                                            width=30,
+                                            action=self.show_buttons)
+        else:
+            self.available = True
+            self.button = sim.AnimateButton(x=self.x - 0, y=self.y - 30, fillcolor=(0, 128, 0), text="Av.",
+                                            width=30,
+                                            action=self.show_buttons)
     def process(self):
         while True:
             if len(wait[self.id]) != 0:
@@ -529,7 +606,6 @@ class Knoop2(sim.Component):
                         vessel.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
                                               fillcolor0='', linecolor0=vessel.color, linewidth0=2)
 
-                        vessel.activate()
                         if len(self.Q1) != 0:
                             vessel = self.Q1.pop()
                         else:
@@ -550,7 +626,6 @@ class Knoop2(sim.Component):
                         vessel.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
                                                  fillcolor0='', linecolor0=vessel.color, linewidth0=2)
 
-                        vessel.activate()
                         if len(self.Q0)!=0:
                             vessel = self.Q0.pop()
                         else:
@@ -567,7 +642,6 @@ class Knoop2(sim.Component):
 
                         yield self.hold(scen2afslag283)
                         wait[self.id].remove(vessel)
-                        vessel.activate()
                 elif len(self.Q2) != 0:
                     vessel = self.Q2.pop()
                     vessel.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
@@ -575,7 +649,6 @@ class Knoop2(sim.Component):
 
                     yield self.hold(scen2afslag673)
                     wait[self.id].remove(vessel)
-                    vessel.activate()
                 elif len(self.Q0)!=0:
                     vessel = self.Q0.pop()
                     if vessel.path[(len(vessel.path)-1)] == 283:
@@ -584,7 +657,6 @@ class Knoop2(sim.Component):
 
                         yield self.hold(scen2afslag283)
                         wait[self.id].remove(vessel)
-                        vessel.activate()
 
 
             else:
@@ -596,10 +668,29 @@ class Knoop3(sim.Component):
         self.x = x
         self.y = y
         self.type = type
+        self.available = True
         sim.Animate(circle0=2, x0=self.x, y0=self.y, fillcolor0=('black', 200), linewidth0=2, linecolor0='black')
         self.Q0 = sim.Queue()
         self.Q1 = sim.Queue()
         self.Q2 = sim.Queue()
+        if self.available:
+            self.button = sim.AnimateButton(x=self.x - 0, y=self.y - 30, fillcolor=(0, 128, 0), text="Av.", width=30,
+                                            action=self.show_buttons)
+        else:
+            self.button = sim.AnimateButton(x=self.x - 0, y=self.y - 30, fillcolor=(255, 0, 0), text="Av.", width=30,
+                                            action=self.show_buttons)
+
+    def show_buttons(self):
+        if self.available:
+            self.available = False
+            self.button = sim.AnimateButton(x=self.x - 0, y=self.y - 30, fillcolor=(255, 0, 0), text="Av.",
+                                            width=30,
+                                            action=self.show_buttons)
+        else:
+            self.available = True
+            self.button = sim.AnimateButton(x=self.x - 0, y=self.y - 30, fillcolor=(0, 128, 0), text="Av.",
+                                            width=30,
+                                            action=self.show_buttons)
 
     def process(self):
         while True:
@@ -639,20 +730,17 @@ class Knoop3(sim.Component):
 
                             yield self.hold(CEMT_turn_tijd)
                             wait[self.id].remove(vessel)
-                            vessel.activate()
                         else:
                             vessel.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
                                                      fillcolor0='', linecolor0=vessel.color, linewidth0=2)
 
                             wait[self.id].remove(vessel)
-                            vessel.activate()
 
                     else:
                         vessel.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
                                                  fillcolor0='', linecolor0=vessel.color, linewidth0=2)
 
                         wait[self.id].remove(vessel)
-                        vessel.activate()
                 if len(self.Q2) !=0 and not CEMT:
                     vessel = self.Q2.pop()
                     if vessel.CEMT == 5:
@@ -687,20 +775,17 @@ class Knoop3(sim.Component):
 
                             yield self.hold(CEMT_turn_tijd)
                             wait[self.id].remove(vessel)
-                            vessel.activate()
                         else:
                             vessel.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
                                                      fillcolor0='', linecolor0=vessel.color, linewidth0=2)
 
                             wait[self.id].remove(vessel)
-                            vessel.activate()
 
                     else:
                         vessel.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
                                                  fillcolor0='', linecolor0=vessel.color, linewidth0=2)
 
                         wait[self.id].remove(vessel)
-                        vessel.activate()
 
 
                 if len(self.Q0) !=0 and not CEMT:
@@ -737,20 +822,17 @@ class Knoop3(sim.Component):
 
                             yield self.hold(CEMT_turn_tijd)
                             wait[self.id].remove(vessel)
-                            vessel.activate()
                         else:
                             vessel.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
                                                      fillcolor0='', linecolor0=vessel.color, linewidth0=2)
 
                             wait[self.id].remove(vessel)
-                            vessel.activate()
 
                     else:
                         vessel.pic_vessel.update(circle0=15, x0=self.x, y0=vessel.y,
                                                  fillcolor0='', linecolor0=vessel.color, linewidth0=2)
 
                         wait[self.id].remove(vessel)
-                        vessel.activate()
 
             yield self.passivate()
 
@@ -768,6 +850,11 @@ class Vessel(sim.Component):
         self.height = height
 
         self.CEMT = 5
+
+        # Patience op schaal van 0 tot 1 ==> 0 is zeer ongeduldig, 1 is zeer geduldig.
+        self.patience = int.from_bytes(os.urandom(8), byteorder="big") / ((1 << 64) - 1)
+        # print("Patience is: "+str(self.patience))
+        self.amount_changed = 0
     #def hold(self, time):
     #   yield self.hold(time)
 
@@ -805,78 +892,241 @@ class Vessel(sim.Component):
                     self.pic_vessel.update(circle0=15, x0=self.x, y0=self.y,
                                            fillcolor0='', linecolor0=self.color, linewidth0=2)
 
-                    if node.type.upper() == "INTERSECTION" and x >=treshold:
-
-                        if(x == treshold):
-                            print("we did it guys")
-                            node.vessels.append(self)
-                            self.enter(node.edgequeues[currentnode[self.id]])
-                            node.count[self] = count
-                            if node.ispassive():
-                                node.activate()
-                        print("wollah")
-                        yield self.passivate()
-                    else:
-                        yield self.hold(1)
+                    yield self.hold(1)
 
 
                 self.x = node.x
                 self.y = node.y
+                # Boot is aangekomen: hier kijkt hij of de wachtrij te lang is om dan eventueel een andere route zoeken
+                # = RENEGING
 
-                self.enter(wait[node.id])
+                # Als er meer dan 5 al staan te wachten --> GET OUTA THERE
+                # Check de verschillende wachtrijen
+                # TODO Nieuwe stuff (geen todo maar het valt nu wel op)
+                oldnode = currentnode[self.id]
 
                 # nieuw stuff
-                if (node.type.upper() == "LOCK"):
-                    print("its a lock")
-                    self.enter(node.ingangen[currentnode[self.id]])
-                elif node.type.upper() == "INTERSECTION":
-                    if (amount == 1):
-                        node.vessels.append(self)
-                        self.enter(node.edgequeues[currentnode[self.id]])
-                        node.count[self] = count
-                        if node.ispassive():
-                            node.activate()
-                        yield self.passivate()
 
-                    oldnode = currentnode[self.id]
-                    self.pic_vessel.update(circle0=15, x0=self.x, y0=self.y,
-                                           fillcolor0='', linecolor0=self.color, linewidth0=2)
-                elif node.type.upper() == "SCEN1KNOT" and len(wait[node.id])>1:
-                    print("waiting outside")
-                elif node.type.upper() == "SCEN2KNOT":
-                    print(currentnode[self.id])
-                    if currentnode[self.id]== 3:
-                        self.enter(node.Q0)
-                    elif currentnode[self.id]==67:
-                        print("entered Q1")
-                        self.enter(node.Q1)
-                    elif currentnode[self.id] == 283:
-                        self.enter(node.Q2)
-                elif node.type.upper() == "SCEN3KNOT":
-                    if currentnode[self.id]== 71:
-                        self.enter(node.Q0)
-                    elif currentnode[self.id]==4:
-                        print("entered Q1")
-                        self.enter(node.Q1)
-                    elif currentnode[self.id] == 285:
-                        self.enter(node.Q2)
-                else:
-                    self.pic_vessel.update(circle0=15, x0=self.x, y0=self.y,
-                                           fillcolor0='', linecolor0=self.color, linewidth0=2)
                 # einde nieuw stuff
 
-                if node.ispassive():
-                    node.activate()
 
-                yield self.passivate()
-                if(node.type.upper() =="INTERSECTION"):
-                    print("jeweetzelf+"+str(self.id))
-                    print("oldnode: "+str(oldnode))
-                    node.vessels.remove(self)
-                    self.leave(node.edgequeues[oldnode])
-                    print(len(node.edgequeues[oldnode]))
-                    node.count.pop(self)
-                    self.leave(wait[node.id])
+                if (len(wait[node.id]) > (self.amount_changed * 1) or not node.available) and (not len(self.path) == 0):
+                    print("LINE TOO LONG!")
+                    Graph2 = nx.Graph(G)
+                    Graph2.remove_node(node.id)
+                    Graph2.add_node(node.id)
+                    Graph2.add_edge(node.id, oldnode)
+
+                    # Remove Unavailable nodes
+                    if onlineLookup:
+                        for nodex in nodelist:
+                            if not nodes[nodex.id].available:
+                                Graph2.remove_node(nodex.id)
+
+                    Graph2.add_node(node.id)
+                    Graph2.add_edge(node.id, oldnode)
+
+                    # print("Vorig pad van "+str(self.id)+": "+str(self.path))
+                    if nx.has_path(Graph2, node.id, self.path[0]):
+
+                        print("Vorig pad: " + str(self.path))
+                        print(str(node.id))
+                        # Hij heeft een pad --> Verander het pad en laat hem er naartoe varen
+                        self.path = nx.shortest_path(Graph2, source=self.path[0], target=node.id)
+                        self.path.pop()
+                        print("Nieuw pad: " + str(self.path))
+                        self.amount_changed = self.amount_changed + 1
+                        print(str(self.id) + " has changed paths " + str(self.amount_changed) + " times now222.")
+
+                        currentnode[self.id] = node.id
+
+                    else:
+                        # Geen pad, dus ga verder met normale executie en neem de normale route
+                        self.enter(wait[node.id])
+
+                        if (node.type.upper() == "LOCK"):
+                            print("its a lock")
+                            self.enter(node.ingangen[currentnode[self.id]])
+                        elif node.type.upper() == "SCEN1KNOT" and len(wait[node.id]) > 1:
+                            print("waiting outside")
+                        elif node.type.upper() == "SCEN2KNOT":
+                            print(currentnode[self.id])
+                            if currentnode[self.id] == 3:
+                                self.enter(node.Q0)
+                            elif currentnode[self.id] == 67:
+                                print("entered Q1")
+                                self.enter(node.Q1)
+                            elif currentnode[self.id] == 283:
+                                self.enter(node.Q2)
+                        elif node.type.upper() == "SCEN3KNOT":
+                            if currentnode[self.id] == 71:
+                                self.enter(node.Q0)
+                            elif currentnode[self.id] == 4:
+                                print("entered Q1")
+                                self.enter(node.Q1)
+                            elif currentnode[self.id] == 285:
+                                self.enter(node.Q2)
+                        else:
+                            self.pic_vessel.update(circle0=15, x0=self.x, y0=self.y,
+                                                   fillcolor0='', linecolor0=self.color, linewidth0=2)
+
+                        oldnode = currentnode[self.id]  # Oldnode verzet zodat dit voor alles geldt
+                        # einde nieuw stuff
+
+                        if node.ispassive():
+                            node.activate()
+
+                        Waiting = True
+                        Possible = True
+                        Balked = False
+                        Changed_Path = False
+
+                        timeWaiting =0
+
+                        # Niewste stuff
+                        while Waiting:
+                            yield self.hold(1)
+                            # print("Waiting for "+str(timeWaiting)+" seconds.")
+                            timeWaiting += 1
+
+                            if self in wait[node.id]:
+                                if node.type.upper() == "LOCK":
+                                    if self not in node.ingangen[currentnode[self.id]]:
+                                        print("everything good")
+                                        Possible = False
+                                if Possible and (not len(self.path) == 0):
+                                    if timeWaiting >= (30 + self.patience * 30 * (1 + self.amount_changed)):
+                                        print("CHANGING COURSE")
+                                        Graph2 = nx.Graph(G)
+                                        Graph2.remove_node(node.id)
+                                        Graph2.add_node(node.id)
+                                        Graph2.add_edge(node.id, oldnode)
+
+                                        # Remove unavailable nodes
+                                        if onlineLookup:
+                                            for nodex in nodelist:
+                                                if not nodes[nodex.id].available:
+                                                    Graph2.remove_node(nodex.id)
+
+                                        Graph2.add_node(node.id)
+                                        Graph2.add_edge(node.id, oldnode)
+
+                                        if not nx.has_path(Graph2, self.path[0], node.id):
+                                            # print("no other options")
+                                            Possible = False
+                                        else:
+                                            self.path = nx.shortest_path(Graph2, source=self.path[0], target=node.id)
+                                            self.path.pop()
+                                            self.leave(wait[node.id])
+                                            self.amount_changed = self.amount_changed + 1
+                                            Waiting = False
+                                            Balked = True
+
+                                        Graph2.add_edge(oldnode, node.id)
+
+                            else:
+                                Waiting = False
+
+                        currentnode[self.id] = node.id
+                else:
+                    # Geen pad, dus ga verder met normale executie en neem de normale route
+                    self.enter(wait[node.id])
+
+                    if (node.type.upper() == "LOCK"):
+                        print("its a lock")
+                        self.enter(node.ingangen[currentnode[self.id]])
+
+                    elif node.type.upper() == "SCEN1KNOT" and len(wait[node.id]) > 1:
+                        print("waiting outside")
+                    elif node.type.upper() == "SCEN2KNOT":
+                        print(currentnode[self.id])
+                        if currentnode[self.id] == 3:
+                            self.enter(node.Q0)
+                        elif currentnode[self.id] == 67:
+                            print("entered Q1")
+                            self.enter(node.Q1)
+                        elif currentnode[self.id] == 283:
+                            self.enter(node.Q2)
+                    elif node.type.upper() == "SCEN3KNOT":
+                        if currentnode[self.id] == 71:
+                            self.enter(node.Q0)
+                        elif currentnode[self.id] == 4:
+                            print("entered Q1")
+                            self.enter(node.Q1)
+                        elif currentnode[self.id] == 285:
+                            self.enter(node.Q2)
+                    else:
+                        self.pic_vessel.update(circle0=15, x0=self.x, y0=self.y,
+                                               fillcolor0='', linecolor0=self.color, linewidth0=2)
+
+                    oldnode = currentnode[self.id]  # Oldnode verzet zodat dit voor alles geldt
+                    # print(str(oldnode)+" oldnode")
+                    # print(str(node.id) + " node")
+                    # einde nieuw stuff
+
+                    if node.ispassive():
+                        node.activate()
+
+                    Waiting = True
+                    Possible = True
+                    Balked = False
+                    Changed_Path = False
+                    timeWaiting = 0
+                    # Niewste stuff
+
+                    while Waiting:
+                        # print(str(self.id) + " zal stoppen met wachten op " + str((30 + self.patience * 60)))
+                        # print(str(self.id) + "Waiting for " + str(timeWaiting) + " seconds.")
+                        yield self.hold(1)
+
+                        timeWaiting += 1
+
+                        if self in wait[node.id]:
+                            # if self.id == 1:
+                            # print(str(len(self.path)))
+
+                            if node.type.upper() == "LOCK":
+                                if self not in node.ingangen[currentnode[self.id]]:
+                                    print("everything good")
+                                    Possible = False
+                            if Possible and (not len(self.path) == 0):  # and (not len(self.path) == 1):
+
+                                if timeWaiting >= (30 + self.patience * 60 * (1 + self.amount_changed)):
+                                    Graph2 = nx.Graph(G)
+                                    Graph2.remove_node(node.id)
+                                    Graph2.add_node(node.id)
+                                    Graph2.add_edge(node.id, oldnode)
+
+                                    # Remove unavailable nodes
+                                    if onlineLookup:
+                                        for nodex in nodelist:
+                                            if not nodes[nodex.id].available:
+                                                Graph2.remove_node(nodex.id)
+                                    Graph2.add_node(node.id)
+                                    Graph2.add_edge(node.id, oldnode)
+                                    if not nx.has_path(Graph2, self.path[0], node.id):
+                                        # print("no other options")
+                                        Possible = False
+                                    else:
+
+                                        # print(self.path)
+                                        # print(self.path[0])
+                                        self.path = nx.shortest_path(Graph2, source=self.path[0], target=node.id)
+                                        self.path.pop()
+                                        # print("Created path; "+str(self.path))
+                                        self.amount_changed = self.amount_changed + 1
+                                        print(str(self.id) + " has changed paths " + str(
+                                            self.amount_changed) + " times now1.")
+                                        self.leave(wait[node.id])
+                                        Waiting = False
+                                        Balked = True
+
+                                    Graph2.add_edge(oldnode, node.id)
+
+                        else:
+                            Waiting = False
+
+                    currentnode[self.id] = node.id
 
                 currentnode[self.id] = node.id
 
@@ -891,16 +1141,33 @@ class Node(sim.Component):
         self.x = x
         self.y = y
         self.type = type
-
+        self.available = True
+        sim.Animate(circle0=2, x0=self.x, y0=self.y, fillcolor0=('black', 200), linewidth0=2, linecolor0='black')
+        if self.available:
+            self.button = sim.AnimateButton(x=self.x - 0, y=self.y - 30, fillcolor=(0, 128, 0), text="Av.", width=30,
+                                            action=self.show_buttons)
+        else:
+            self.button = sim.AnimateButton(x=self.x - 0, y=self.y - 30, fillcolor=(255, 0, 0), text="Av.", width=30,
+                                            action=self.show_buttons)
         sim.Animate(circle0=2, x0=self.x, y0=self.y, fillcolor0=('black', 200),linewidth0=2, linecolor0='black')
         #sim.AnimateText(text=self.type+" "+str(self.id), font='narrow', textcolor='black', text_anchor='c', offsety=30, x=self.x,y=self.y)
 
+    def show_buttons(self):
+        if self.available:
+            self.available = False
+            self.button = sim.AnimateButton(x=self.x - 0, y=self.y - 30, fillcolor=(255, 0, 0), text="Av.",
+                                            width=30,
+                                            action=self.show_buttons)
+        else:
+            self.available = True
+            self.button = sim.AnimateButton(x=self.x - 0, y=self.y - 30, fillcolor=(0, 128, 0), text="Av.",
+                                            width=30,
+                                            action=self.show_buttons)
     def process(self):
         while True:
             if len(wait[self.id])!=0:
                 yield self.hold(5)
                 vessel = wait[self.id].pop()
-                vessel.activate()
             else:
                 yield self.passivate()
 
@@ -932,7 +1199,10 @@ elif name == "scen2":
     sim.AnimateImage('../Files/scenario2.png', x=0, y=27, width=940)
 elif name == "scen3":
     sim.AnimateImage('../Files/scenario3.png', x=0, y=27, width=940)
-
+elif name == "cirkel":
+    sim.AnimateImage('../Pictures/layout.png', x=0, y=27, width=940)
+elif name == "splitsing":
+    sim.AnimateImage('../Pictures/splitsing.png', x=0, y=27, width=940)
 
 # Dict to map a vessel's current node
 currentnode = {}
@@ -988,9 +1258,6 @@ for node in nodelist:
     elif node.type.upper()=='LOCK':
         node = Lock(name="Node " + str(node.id), id=node.id, x=realX, y=realY, type=node.type, maxLength=15);
         locknodes.append(node)
-    elif node.type.upper()=='INTERSECTION':
-        node = Intersection(name="Node " + str(node.id), id=node.id, x=realX, y=realY, type=node.type)
-        intersectnodes.append(node)
     elif node.type.upper() == 'DEFAULT':
         node = Node(name="Node " + str(node.id), id=node.id, x=realX, y=realY, type=node.type)
     elif node.type.upper() == 'LIGHT':
@@ -1009,6 +1276,12 @@ for node in nodelist:
         print(str(node.type) + ' is an invalid type')
     # Put the nodes in the dict
     nodes[node.id] = node
+
+    """elif node.type.upper()=='INTERSECTION':
+            node = Intersection(name="Node " + str(node.id), id=node.id, x=realX, y=realY, type=node.type)
+            intersectnodes.append(node)"""
+
+
 
 
 nodes[3].lights = lightLocks
@@ -1055,15 +1328,18 @@ class VesselGenerator(sim.Component):
             # Generate random starting and ending node
             customized_nodelist = []
             for no in nodelist:
-                if no.type.upper() != 'LIGHTLOCK' and no.type.upper() != "LOCK" and no.type.upper() != "SCEN3KNOT" and no.type.upper() != "SCEN2KNOT" and no.type.upper() != "SCEN1KNOT":
-                    customized_nodelist.append(no)
+                #if no.type.upper() != 'LIGHTLOCK' and no.type.upper() != "LOCK" and no.type.upper() != "SCEN3KNOT" and no.type.upper() != "SCEN2KNOT" and no.type.upper() != "SCEN1KNOT":
+                customized_nodelist.append(no)
 
             vesselStartAndEnd = random.sample(customized_nodelist, 2)
             print(str(vesselStartAndEnd[0].id) + " tester " + str(vesselStartAndEnd[1].id))
+            Graph2 = nx.Graph(G)
+            if onlineLookup:
+                for nodex in customized_nodelist:
+                    if not nodes[nodex.id].available:
+                        Graph2.remove_node(nodex.id)
             # Generated path between vessels
-            paths_between_generator = nx.all_simple_paths(G, source=vesselStartAndEnd[1].id,
-                                                          target=vesselStartAndEnd[0].id)
-            nodes_between_set = [node for path in paths_between_generator for node in path]
+            paths_between_generator = nx.shortest_path(Graph2, source=vesselStartAndEnd[1].id, target=vesselStartAndEnd[0].id)
 
             # nodes_between_set = set()
 
@@ -1071,13 +1347,13 @@ class VesselGenerator(sim.Component):
             #    nodes_between_set.add(node)
 
             # Start node
-            currentnode[id] = nodes_between_set.pop()
+            currentnode[id] = paths_between_generator.pop()
             print(currentnode[id])
             # Generate new vessel
-            print(nodes_between_set)
+            print(paths_between_generator)
             random_int = random.randint(0, 59)
             random_height = random.randint(200,1100)
-            Vessel(name="Vessel " + str(id), id=id, speed=int(vessels[random_int].speed), path=nodes_between_set,length=5, height=int(random_height))
+            Vessel(name="Vessel " + str(id), id=id, speed=int(vessels[random_int].speed), path=paths_between_generator,length=5, height=int(random_height))
             id = id + 1
             yield self.hold(sim.Poisson(10).sample())
 
