@@ -12,6 +12,8 @@ user32 = ctypes.windll.user32
 screensize = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
 onlineLookup = 0#int(sys.argv[1])
 
+T=60
+N=6000
 
 import numpy as np
 name = "splitsing"
@@ -908,9 +910,10 @@ class Vessel(sim.Component):
                 # nieuw stuff
 
                 # einde nieuw stuff
+                global balked
+                global reneged
 
-
-                if (len(wait[node.id]) > (self.amount_changed * 1) or not node.available) and (not len(self.path) == 0):
+                if (len(wait[node.id]) >= ((self.amount_changed + 1) * N) or not node.available) and (not len(self.path) == 0):
                     print("LINE TOO LONG!")
                     Graph2 = nx.Graph(G)
                     Graph2.remove_node(node.id)
@@ -995,7 +998,7 @@ class Vessel(sim.Component):
                                         print("everything good")
                                         Possible = False
                                 if Possible and (not len(self.path) == 0):
-                                    if timeWaiting >= (30 + self.patience * 30 * (1 + self.amount_changed)):
+                                    if timeWaiting >= (T + self.patience * T * (1 + self.amount_changed)):
                                         print("CHANGING COURSE")
                                         Graph2 = nx.Graph(G)
                                         Graph2.remove_node(node.id)
@@ -1091,7 +1094,7 @@ class Vessel(sim.Component):
                                     Possible = False
                             if Possible and (not len(self.path) == 0):  # and (not len(self.path) == 1):
 
-                                if timeWaiting >= (30 + self.patience * 60 * (1 + self.amount_changed)):
+                                if timeWaiting >= (T + self.patience * T * (1 + self.amount_changed)):
                                     Graph2 = nx.Graph(G)
                                     Graph2.remove_node(node.id)
                                     Graph2.add_node(node.id)
